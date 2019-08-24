@@ -62,7 +62,7 @@ server.post("/api/login", async (req, res) => {
       req.session.user = user;
       res.status(200).json({ message: `Welcome ${user.username}` });
     } else {
-      res.status(401).json({ message: "Invalid Credentials" });
+      res.status(401).json({ message: "You Shall Not Pass!" });
     }
   } catch (error) {
     res.status(500).json(error);
@@ -75,6 +75,12 @@ server.get("/api/users", restricted, (req, res) => {
       res.json(users);
     })
     .catch(err => res.send(err));
+});
+
+server.get("/api/restricted/secret", restricted, (req, res) => {
+  res.send(
+    `<a href="http://bit.ly/restrictedStuffs">Link to the restricted content</a>`
+  );
 });
 
 function validate(req, res, next) {
