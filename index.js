@@ -1,15 +1,40 @@
 const express = require("express");
+const session = require("express-session");
+const knexSessionStore = require("connect-session-knex")(session);
 const helmet = require("helmet");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 
 const Users = require("./users-model");
 
+const sessionOptions = {
+  name: "mycookie",
+  secret: "secretcookie",
+  cookie: {
+    maxAge: 1000 * 60 * 60,
+    secure: false,
+    httpOnly: true
+  },
+  resave: false,
+  saveUninitialized: false,
+
+  store: new knexSessionStore({
+    knex: require("./data/dbConfig.js"),
+    tablename: "sessions",
+    sidfieldname: "sid",
+    createTable: true,
+    clearInterval: 1000 * 60 * 60
+  })
+};
+
 const server = express();
 
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
+server.use(session(sessionOptions));
+
+const restricted = require("./restricted/restricted-middleware");
 
 server.get("/", (req, res) => {
   res.send(`<h1>WEBAUTH MODULE 1</h1>`);
@@ -34,6 +59,7 @@ server.post("/api/login", async (req, res) => {
 
   try {
     if (user && bcrypt.compareSync(password, user.password)) {
+      req.session.user = user;
       res.status(200).json({ message: `Welcome ${user.username}` });
     } else {
       res.status(401).json({ message: "Invalid Credentials" });
@@ -43,7 +69,7 @@ server.post("/api/login", async (req, res) => {
   }
 });
 
-server.get("/api/users", validate, (req, res) => {
+server.get("/api/users", restricted, (req, res) => {
   Users.find()
     .then(users => {
       res.json(users);
